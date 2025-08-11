@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
 
 # <-- CORRECCIÓN: 'permissions' debe estar al nivel raíz, no dentro de 'on'.
 permissions:
