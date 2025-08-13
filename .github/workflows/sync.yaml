@@ -1,8 +1,10 @@
-name: Deploy FastAPI and React App to AWS
+name: S3 sync action
+
 on:
+  workflow_dispatch:
   push:
     branches:
-      - main  # O la rama principal que uses (ej. master)
+      - main
 # Permisos necesarios para la autenticación OIDC con AWS
 permissions:
   id-token: write
