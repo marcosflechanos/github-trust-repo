@@ -20,24 +20,22 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      # --- PASO DE DEPURACIÓN ---
-      # Este paso nos mostrará la estructura de archivos para encontrar la ruta correcta.
-      - name: List all files in the repository
-        run: ls -R
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          # <-- CORRECCIÓN CLAVE: Se actualiza la versión de Node a la 20.x
+          node-version: '20'
           cache: 'npm'
+          cache-dependency-path: src/frontend/package-lock.json
 
-      - name: Install dependencies and Build
-        # La ruta aquí abajo sigue siendo la que causa el error.
-        # El log del paso anterior ("List all files...") nos dirá cuál es la ruta correcta para poner aquí.
-        working-directory: ./src/frontend  # <-- ¡ESTA ES LA LÍNEA QUE TENDRÁS QUE CORREGIR!
+      - name: Install Dependencies and Build
+        working-directory: ./src/frontend
         run: |
           npm ci
-          REACT_APP_API_URL=${{ secrets.API_GATEWAY_URL }} npm run build
+          # No es necesario pasar la variable de entorno aquí si usas Vite de la forma estándar.
+          # Vite usa variables de entorno que empiezan con VITE_. Si la necesitas, sería:
+          # VITE_API_URL=${{ secrets.API_GATEWAY_URL }} npm run build
+          npm run build
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -48,5 +46,6 @@ jobs:
 
       - name: Sync build folder to S3 Bucket
         run: |
-          # También tendrás que ajustar esta ruta para que coincida con la ruta correcta + /build/
-          aws s3 sync ./src/frontend/build/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
+          # La carpeta de build de Vite se llama "dist" por defecto, no "build".
+          # ----> AJUSTE IMPORTANTE <----
+          aws s3 sync ./src/frontend/dist/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
