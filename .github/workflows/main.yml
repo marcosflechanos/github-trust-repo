@@ -37,7 +37,7 @@ jobs:
         # Se ajusta al directorio que contiene tu package.json.
         # El error ENOENT indicaba que 'src/frontend' era incorrecto. 'frontend' es una suposición común.
         # ¡VERIFICA QUE ESTA SEA LA RUTA CORRECTA EN TU REPO!
-        working-directory: ./frontend
+        working-directory: ./src/frontend
         run: |
           # Usamos 'npm ci' porque es más rápido y seguro para CI/CD y ya tienes package-lock.json
           echo "Installing dependencies..."
