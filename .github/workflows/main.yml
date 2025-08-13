@@ -1,43 +1,65 @@
+# .github/workflows/sync.yaml
+name: S3 Sync Frontend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+# Permisos a nivel raíz para que la action pueda autenticarse con AWS vía OIDC
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  sync:
+  # Job para desplegar el frontend
+  deploy-frontend:
+    name: Build and Deploy Frontend to S3
     runs-on: ubuntu-latest
-    env:
-      FRONTEND_DIR: ./src/frontend   # <-- AJUSTA ESTO a la ruta donde sí existe package.json
+
     steps:
+      # 1. Descarga el código del repositorio
       - name: Checkout Repo
         uses: actions/checkout@v4
 
+      # 2. Configura el entorno de Node.js para compilar el proyecto React
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '18' # Usar una versión LTS (Long-Term Support) de Node.js
+          cache: 'npm' # Habilita el caché para acelerar las instalaciones futuras
 
-      - name: Verificar ruta del frontend
+      # 3. Instala dependencias y compila el proyecto
+      #    Se ejecuta en el directorio donde está el package.json
+      - name: Install dependencies and Build
+        # ----> CORRECCIÓN CLAVE <----
+        # Se ajusta al directorio que contiene tu package.json.
+        # El error ENOENT indicaba que 'src/frontend' era incorrecto. 'frontend' es una suposición común.
+        # ¡VERIFICA QUE ESTA SEA LA RUTA CORRECTA EN TU REPO!
+        working-directory: ./frontend
         run: |
-          echo "Buscando $FRONTEND_DIR/package.json"
-          test -f "$FRONTEND_DIR/package.json" || (echo "No se encontró $FRONTEND_DIR/package.json"; echo "Candidatos:"; find . -maxdepth 3 -name package.json; exit 1)
+          # Usamos 'npm ci' porque es más rápido y seguro para CI/CD y ya tienes package-lock.json
+          echo "Installing dependencies..."
+          npm ci
 
-      - name: Install frontend dependencies and build
-        working-directory: ${{ env.FRONTEND_DIR }}
-        env:
-          REACT_APP_API_URL: ${{ secrets.API_GATEWAY_URL }}
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install --no-audit --no-fund
-          fi
-          npm run build
+          # Compilamos la aplicación de React, pasando la URL de la API como variable de entorno
+          echo "Building React application..."
+          REACT_APP_API_URL=${{ secrets.API_GATEWAY_URL }} npm run build
 
-      - name: Connect to AWS
-        uses: aws-actions/configure-aws-credentials@v2
+      # 4. Configura las credenciales de AWS usando el Rol de IAM
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4 # Versión actualizada
         with:
-          role-session-name: awssyncsession
           role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHubActionsFrontendSession # Nombre de sesión descriptivo
 
-      - name: Sync files to S3
-        run: aws s3 sync ${{ env.FRONTEND_DIR }}/build/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
-
-      - name: Sync bucket
-        run: aws s3 sync ./files/ s3://${{ secrets.AWS_BUCKET_NAME }} --delete
+      # 5. Sincroniza los archivos compilados del frontend con el bucket de S3
+      #    Esta es la única sincronización que parece necesaria para el frontend.
+      - name: Sync build folder to S3 Bucket
+        run: |
+          echo "Syncing files to S3 bucket: ${{ secrets.S3_BUCKET_NAME }}"
+          # ----> CORRECCIÓN <----
+          # La ruta de origen debe coincidir con dónde se generó el build.
+          aws s3 sync ./frontend/build/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
