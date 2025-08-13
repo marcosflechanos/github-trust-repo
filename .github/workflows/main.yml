@@ -29,18 +29,12 @@ jobs:
 
       - name: Install frontend dependencies and build
         working-directory: ./src/frontend
-        env:
-          REACT_APP_API_URL: ${{ secrets.API_GATEWAY_URL }}
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install --no-audit --no-fund
-          fi
-          npm run build
-      
-
-
+          npm ci
+          # Necesitas pasar la URL de la API como variable de entorno al build
+          # La forma de obtenerla es un poco tricky. Puedes hardcodearla o guardarla como otro secret.
+          # Vamos a suponer que la tienes en un secret llamado `API_GATEWAY_URL`
+          REACT_APP_API_URL=${{ secrets.API_GATEWAY_URL }} npm run build
 
       - name: Connect to AWS
         # <-- MEJORA: Usar una versión más reciente de la acción.
