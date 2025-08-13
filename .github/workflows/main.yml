@@ -1,0 +1,40 @@
+name: Deploy FastAPI and React App to AWS
+on:
+  push:
+    branches:
+      - main  # O la rama principal que uses (ej. master)
+# Permisos necesarios para la autenticación OIDC con AWS
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  #######################
+  #   DEPLOY FRONTEND   #
+  #######################
+  deploy-frontend:
+    # Solo ejecutar si hay cambios en la carpeta 'src/frontend'
+    if: "contains(join(github.event.commits.*.modified, ''), 'src/frontend/') || contains(join(github.event.commits.*.added, ''), 'src/frontend/')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # Usa una versión LTS de Node
+      - name: Install frontend dependencies and build
+        working-directory: ./src/frontend
+        run: |
+          npm ci
+          # Necesitas pasar la URL de la API como variable de entorno al build
+          # La forma de obtenerla es un poco tricky. Puedes hardcodearla o guardarla como otro secret.
+          # Vamos a suponer que la tienes en un secret llamado `API_GATEWAY_URL`
+          REACT_APP_API_URL=${{ secrets.API_GATEWAY_URL }} npm run build
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Sync files to S3
+        run: |
+          aws s3 sync ./src/frontend/build/ s3://${{ secrets.AWS_BUCKET_NAME }} --delete
