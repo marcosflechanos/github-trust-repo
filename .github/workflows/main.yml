@@ -22,6 +22,20 @@ jobs:
         # <-- MEJORA: Usar una versión más reciente de la acción.
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # Usa una versión LTS de Node
+      - name: Install frontend dependencies and build
+        working-directory: ./src/frontend
+        run: |
+          npm ci
+          # Necesitas pasar la URL de la API como variable de entorno al build
+          # La forma de obtenerla es un poco tricky. Puedes hardcodearla o guardarla como otro secret.
+          # Vamos a suponer que la tienes en un secret llamado `API_GATEWAY_URL`
+          REACT_APP_API_URL=${{ secrets.API_GATEWAY_URL }} npm run build
+
+
       - name: Connect to AWS
         # <-- MEJORA: Usar una versión más reciente de la acción.
         uses: aws-actions/configure-aws-credentials@v2
@@ -30,6 +44,11 @@ jobs:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
           # <-- CORRECCIÓN: El parámetro es 'aws-region' y no se necesita el '$'.
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Sync files to S3
+        run: |
+          aws s3 sync ./src/frontend/build/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
+
 
       - name: Sync bucket
         # El comando 'sync' está bien escrito.
