@@ -1,5 +1,5 @@
 # .github/workflows/sync.yaml
-name: S3 Sync Backend
+name: Lambda Sync Backend
 
 on:
   workflow_dispatch:
