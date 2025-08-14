@@ -13,9 +13,6 @@ permissions:
 
 jobs:
 
-  #######################
-  #   DEPLOY BACKEND    #
-  #######################
   deploy-backend:
     # Solo ejecutar si hay cambios en la carpeta 'src/backend'
     runs-on: ubuntu-latest
