@@ -12,6 +12,39 @@ permissions:
   contents: read
 
 jobs:
+
+  #######################
+  #   DEPLOY BACKEND    #
+  #######################
+  deploy-backend:
+    # Solo ejecutar si hay cambios en la carpeta 'src/backend'
+    if: "contains(join(github.event.commits.*.modified, ''), 'src/backend/') || contains(join(github.event.commits.*.added, ''), 'src/backend/')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install backend dependencies and create zip package
+        working-directory: ./src/backend
+        run: |
+          pip install -r requirements.txt -t .
+          zip -r ../../lambda_function.zip .
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Deploy to AWS Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://lambda_function.zip
+
+
+
   deploy-frontend:
     name: Build and Deploy Frontend to S3
     runs-on: ubuntu-latest
