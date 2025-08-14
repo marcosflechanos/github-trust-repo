@@ -3,7 +3,7 @@ from mangum import Mangum
 app = FastAPI()
 @app.get("/api")
 def read_root():
-    return {"message": "Hola, como estas,  desde FastAPI en Lambda2!"}
+    return {"message": "Hola22, como estas,  desde FastAPI en Lambda2!"}
 
 @app.get("/api/items/{item_id}")
 def read_item(item_id: int):
